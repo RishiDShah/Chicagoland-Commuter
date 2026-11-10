@@ -4,10 +4,12 @@ import com.chicagoland.commuter.SystemStatusService;
 import com.chicagoland.commuter.gtfs.GtfsRefreshService;
 import com.chicagoland.commuter.gtfs.StopSearchService;
 import com.chicagoland.commuter.gtfs.StopSearchService.StopSuggestion;
+import com.chicagoland.commuter.routing.TripPlanner;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.datetimepicker.DateTimePicker;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
@@ -16,24 +18,26 @@ import com.vaadin.flow.data.provider.CallbackDataProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import java.text.NumberFormat;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Collectors;
 
-/** Home screen: pick a start and destination station. Routing comes in a later milestone. */
+/** Home screen: pick a start, a destination and a time, and see the best trips. */
 @Route("")
 @PageTitle("Chicagoland Commuter")
 public class PlanTripView extends VerticalLayout {
 
-    private static final DateTimeFormatter UPDATED = DateTimeFormatter.ofPattern("MMM d, yyyy")
-            .withZone(ZoneId.of("America/Chicago"));
+    private static final ZoneId CHICAGO = ZoneId.of("America/Chicago");
+    private static final DateTimeFormatter UPDATED = DateTimeFormatter.ofPattern("MMM d, yyyy").withZone(CHICAGO);
 
     private final SystemStatusService system;
     private final GtfsRefreshService schedules;
     private final Span databaseLine = statusSpan();
     private final Span scheduleLine = statusSpan();
 
-    public PlanTripView(SystemStatusService system, GtfsRefreshService schedules, StopSearchService stops) {
+    public PlanTripView(SystemStatusService system, GtfsRefreshService schedules, StopSearchService stops,
+                        TripPlanner planner) {
         this.system = system;
         this.schedules = schedules;
         setMaxWidth("480px");
@@ -45,19 +49,33 @@ public class PlanTripView extends VerticalLayout {
         var from = stopPicker("From", "e.g. Bartlett", stops);
         var to = stopPicker("To", "e.g. UIC-Halsted", stops);
 
-        var result = new Paragraph();
+        var leaveAt = new DateTimePicker("Leave at");
+        leaveAt.setValue(LocalDateTime.now(CHICAGO).withSecond(0).withNano(0));
+        leaveAt.setStep(java.time.Duration.ofMinutes(5));
+        leaveAt.setWidthFull();
+
+        var results = new VerticalLayout();
+        results.setPadding(false);
+        results.setSpacing(true);
+
         var plan = new Button("Plan trip", e -> {
-            if (from.isEmpty() || to.isEmpty()) {
-                result.setText("Choose a station or stop in both boxes.");
-            } else {
-                result.setText("Routing from " + from.getValue().label() + " to " + to.getValue().label()
-                        + " is coming soon.");
+            results.removeAll();
+            if (from.isEmpty() || to.isEmpty() || leaveAt.isEmpty()) {
+                results.add(new Paragraph("Choose a station or stop in both boxes."));
+                return;
             }
+            var result = planner.plan(from.getValue().stopId(), to.getValue().stopId(), leaveAt.getValue(), 3);
+            if (result.options().isEmpty()) {
+                results.add(new Paragraph(result.message()));
+            }
+            result.options().forEach(journey -> results.add(new JourneyCard(journey)));
         });
         plan.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         plan.setWidthFull();
+        plan.setDisableOnClick(true);
+        plan.addClickListener(e -> plan.setEnabled(true));
 
-        add(title, from, to, plan, result, databaseLine, scheduleLine);
+        add(title, from, to, leaveAt, plan, results, databaseLine, scheduleLine);
     }
 
     @Override

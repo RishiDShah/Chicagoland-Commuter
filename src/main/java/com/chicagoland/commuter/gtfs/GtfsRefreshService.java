@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -38,16 +39,18 @@ public class GtfsRefreshService {
     private final GtfsDownloader downloader;
     private final GtfsImporter importer;
     private final JdbcTemplate jdbc;
+    private final ApplicationEventPublisher events;
 
     private volatile boolean loading;
     private volatile String error;
 
     public GtfsRefreshService(GtfsProperties properties, GtfsDownloader downloader, GtfsImporter importer,
-                              JdbcTemplate jdbc) {
+                              JdbcTemplate jdbc, ApplicationEventPublisher events) {
         this.properties = properties;
         this.downloader = downloader;
         this.importer = importer;
         this.jdbc = jdbc;
+        this.events = events;
     }
 
     /** Runs in the background so the app opens right away, even while the first import is running. */
@@ -79,12 +82,14 @@ public class GtfsRefreshService {
                     .collect(Collectors.toMap(f -> f.feed().id(), GtfsImporter.FeedFile::sha256));
             if (downloaded.equals(imported)) {
                 log.info("Schedules unchanged, nothing to import");
+                events.publishEvent(new SchedulesImportedEvent());
                 return;
             }
             log.info("Importing schedules for {} (the first import takes a few minutes)", downloaded.keySet());
             importer.importAll(files);
             jdbc.execute("ANALYZE");
             log.info("Schedules imported");
+            events.publishEvent(new SchedulesImportedEvent());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (Exception e) {
