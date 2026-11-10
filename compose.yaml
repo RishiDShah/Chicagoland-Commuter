@@ -1,0 +1,24 @@
+# Local database. Spring Boot starts this automatically when you run the app,
+# or start it yourself with:  docker compose up -d
+services:
+  postgres:
+    image: postgis/postgis:17-3.5
+    labels:
+      # Tells Spring Boot this PostGIS image is a PostgreSQL database it can connect to
+      org.springframework.boot.service-connection: postgres
+    environment:
+      POSTGRES_DB: commuter
+      POSTGRES_USER: commuter
+      POSTGRES_PASSWORD: commuter
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U commuter -d commuter"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
