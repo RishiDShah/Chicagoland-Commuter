@@ -124,3 +124,17 @@ vaadin-date-time-picker.field::part(label) {
 .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--faint); flex-shrink: 0; margin-top: 5px; }
 .dot.ok { background: var(--accent); }
 .dot.bad { background: var(--danger); }
+
+/* "Use current time" under Leave at, shown after picking a time yourself */
+.link-btn {
+  align-self: flex-start;
+  margin: -12px 0 0;
+  padding: 0;
+  min-height: 32px;
+  background: none;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}

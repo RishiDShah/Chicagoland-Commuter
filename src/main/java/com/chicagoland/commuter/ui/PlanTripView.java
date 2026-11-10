@@ -6,6 +6,7 @@ import com.chicagoland.commuter.gtfs.StopSearchService;
 import com.chicagoland.commuter.gtfs.StopSearchService.StopSuggestion;
 import com.chicagoland.commuter.routing.TripPlanner;
 import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
@@ -18,12 +19,10 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.provider.CallbackDataProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import java.text.NumberFormat;
+import com.vaadin.flow.shared.Registration;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.stream.Collectors;
 
 /** Home screen: pick a start, a destination and a time, and see the best trips. */
 @Route("")
@@ -31,12 +30,17 @@ import java.util.stream.Collectors;
 public class PlanTripView extends VerticalLayout {
 
     private static final ZoneId CHICAGO = ZoneId.of("America/Chicago");
-    private static final DateTimeFormatter UPDATED = DateTimeFormatter.ofPattern("MMM d, yyyy").withZone(CHICAGO);
 
     private final SystemStatusService system;
     private final GtfsRefreshService schedules;
     private final StatusRow databaseRow = new StatusRow();
     private final StatusRow scheduleRow = new StatusRow();
+    private final Div status = new Div(databaseRow, scheduleRow);
+    private final DateTimePicker leaveAt = new DateTimePicker("Leave at");
+    private final Button useNow = new Button("Use current time");
+    /** True until the person picks a time themselves; while true, "Leave at" follows the clock. */
+    private boolean followNow = true;
+    private Registration pollRegistration;
 
     public PlanTripView(SystemStatusService system, GtfsRefreshService schedules, StopSearchService stops,
                         TripPlanner planner) {
@@ -58,18 +62,37 @@ public class PlanTripView extends VerticalLayout {
         var from = stopPicker("From", "Search a station, e.g. Bartlett", stops);
         var to = stopPicker("To", "Search a station, e.g. UIC-Halsted", stops);
 
-        var leaveAt = new DateTimePicker("Leave at");
         leaveAt.addClassName("field");
-        leaveAt.setValue(LocalDateTime.now(CHICAGO).withSecond(0).withNano(0));
-        leaveAt.setStep(Duration.ofMinutes(5));
+        leaveAt.setStep(Duration.ofMinutes(1));
+        setLeaveAtToNow();
+        leaveAt.addValueChangeListener(e -> {
+            if (e.isFromClient()) {
+                followNow = false;   // planning ahead: stop following the clock
+                useNow.setVisible(true);
+            }
+        });
+        useNow.addClassName("link-btn");
+        useNow.setVisible(false);
+        useNow.addClickListener(e -> {
+            followNow = true;
+            useNow.setVisible(false);
+            setLeaveAtToNow();
+        });
 
         var results = new Div();
         results.addClassName("results");
 
         var plan = new Button("Plan trip", e -> {
             results.removeAll();
-            if (from.isEmpty() || to.isEmpty() || leaveAt.isEmpty()) {
+            if (followNow) {
+                setLeaveAtToNow();
+            }
+            if (from.isEmpty() || to.isEmpty()) {
                 results.add(message("Choose a station in both boxes."));
+                return;
+            }
+            if (leaveAt.isEmpty()) {
+                results.add(message("Choose a date and time to leave."));
                 return;
             }
             var result = planner.plan(from.getValue().stopId(), to.getValue().stopId(), leaveAt.getValue(), 3);
@@ -84,51 +107,69 @@ public class PlanTripView extends VerticalLayout {
         plan.setDisableOnClick(true);
         plan.addClickListener(e -> plan.setEnabled(true));
 
-        var status = new Div(databaseRow, scheduleRow);
+        // Only shown when something is wrong (database down, schedules not loaded yet)
         status.addClassName("status");
+        status.setVisible(false);
 
-        add(header, from, to, leaveAt, plan, results, status);
+        add(header, from, to, leaveAt, useNow, plan, results, status);
     }
 
     @Override
     protected void onAttach(AttachEvent event) {
         refreshStatus();
-        // While schedules are loading, check back every 5 seconds so the status updates by itself
-        event.getUI().setPollInterval(5000);
-        event.getUI().addPollListener(e -> {
-            if (refreshStatus()) {
-                e.getSource().setPollInterval(-1);
+        // Check back every 15 seconds: keeps "Leave at" on the current time and updates the status
+        event.getUI().setPollInterval(15_000);
+        pollRegistration = event.getUI().addPollListener(e -> {
+            if (followNow) {
+                setLeaveAtToNow();
             }
+            refreshStatus();
         });
     }
 
-    /** Updates the status box. Returns true once there is nothing left to wait for. */
-    private boolean refreshStatus() {
+    @Override
+    protected void onDetach(DetachEvent event) {
+        if (pollRegistration != null) {
+            pollRegistration.remove();
+            pollRegistration = null;
+        }
+        event.getUI().setPollInterval(-1);
+    }
+
+    private void setLeaveAtToNow() {
+        var now = LocalDateTime.now(CHICAGO).withSecond(0).withNano(0);
+        if (!now.equals(leaveAt.getValue())) {
+            leaveAt.setValue(now);
+        }
+    }
+
+    /** Shows the status box only when something needs attention; hides it when everything works. */
+    private void refreshStatus() {
         try {
-            databaseRow.set(StatusRow.State.OK, "Database connected · PostGIS " + system.postgisVersion());
+            system.postgisVersion();
+            databaseRow.setVisible(false);
         } catch (RuntimeException ex) {
             databaseRow.set(StatusRow.State.BAD, "Database not reachable. Is Docker Desktop running?");
+            databaseRow.setVisible(true);
             scheduleRow.setVisible(false);
-            return false;
+            status.setVisible(true);
+            return;
         }
-        scheduleRow.setVisible(true);
-        var status = schedules.status();
-        if (status.ready()) {
-            var n = NumberFormat.getIntegerInstance();
-            scheduleRow.set(StatusRow.State.OK, "Schedules: " + status.feeds().stream()
-                    .map(f -> f.name() + " " + n.format(f.stops()) + " stops")
-                    .collect(Collectors.joining(" · "))
-                    + " · updated " + UPDATED.format(status.feeds().getFirst().importedAt())
-                    + (status.loading() ? " · checking for updates…" : ""));
-        } else if (status.loading()) {
+        var feeds = schedules.status();
+        if (feeds.ready()) {
+            scheduleRow.setVisible(false);
+        } else if (feeds.loading()) {
             scheduleRow.set(StatusRow.State.WAITING,
                     "Loading CTA, Metra and Pace schedules… The first time takes a few minutes.");
-        } else if (status.error() != null) {
-            scheduleRow.set(StatusRow.State.BAD, "Couldn't load schedules: " + status.error());
+            scheduleRow.setVisible(true);
+        } else if (feeds.error() != null) {
+            scheduleRow.set(StatusRow.State.BAD, "Couldn't load schedules: " + feeds.error());
+            scheduleRow.setVisible(true);
         } else {
             scheduleRow.set(StatusRow.State.WAITING, "No schedules loaded yet.");
+            scheduleRow.setVisible(true);
         }
-        return !status.loading();
+        status.setVisible(scheduleRow.isVisible());
     }
 
     private static ComboBox<StopSuggestion> stopPicker(String label, String placeholder, StopSearchService stops) {
@@ -148,9 +189,9 @@ public class PlanTripView extends VerticalLayout {
         return p;
     }
 
-    /** A line in the status box with a colored dot: orange when fine, red when something's wrong. */
+    /** A line in the status box with a dot: gray while waiting, red when something's wrong. */
     private static final class StatusRow extends Div {
-        enum State { OK, WAITING, BAD }
+        enum State { WAITING, BAD }
 
         private final Span dot = new Span();
         private final Span text = new Span();
@@ -163,9 +204,7 @@ public class PlanTripView extends VerticalLayout {
 
         void set(State state, String message) {
             dot.setClassName("dot");
-            if (state == State.OK) {
-                dot.addClassName("ok");
-            } else if (state == State.BAD) {
+            if (state == State.BAD) {
                 dot.addClassName("bad");
             }
             text.setText(message);
