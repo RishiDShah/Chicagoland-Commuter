@@ -114,17 +114,6 @@ vaadin-date-time-picker.field::part(label) {
   color: var(--muted); font-size: 14px;
 }
 
-/* ---------- status ---------- */
-.status {
-  display: flex; flex-direction: column; gap: 4px;
-  padding: 12px 16px; background: var(--soft); border-radius: 16px;
-  color: var(--muted); font-size: 13px; line-height: 1.4; width: 100%; box-sizing: border-box;
-}
-.status-row { display: flex; align-items: flex-start; gap: 8px; }
-.dot { width: 8px; height: 8px; border-radius: 4px; background: var(--faint); flex-shrink: 0; margin-top: 5px; }
-.dot.ok { background: var(--accent); }
-.dot.bad { background: var(--danger); }
-
 /* "Use current time" under Leave at, shown after picking a time yourself */
 .link-btn {
   align-self: flex-start;
