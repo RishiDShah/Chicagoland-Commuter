@@ -1,0 +1,2 @@
+route_id, route_short_name, route_long_name, route_desc, agency_id, route_type, route_color, route_text_color, route_url
+MD-W, MD-W, Milwaukee District West, , METRA, 2, E1AD1F, 000000, https://metrarail.com/maps-schedules/train-lines/MD-W

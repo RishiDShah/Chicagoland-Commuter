@@ -1,0 +1,2 @@
+route_id,service_id,trip_id,direction_id,block_id,shape_id,direction,wheelchair_accessible,schd_trip_id
+157,68101,6810000272020,0,681000003905,68106351,South,1,272020

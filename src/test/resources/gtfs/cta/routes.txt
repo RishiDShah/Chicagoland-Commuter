@@ -1,0 +1,3 @@
+agency_id,route_id,route_short_name,route_long_name,route_type,route_url,route_color,route_text_color
+50066,157,157,Streeterville/Taylor,3,http://www.transitchicago.com/bus/157/,565a5c,ffffff
+50066,Blue,,Blue Line,1,http://www.transitchicago.com/blueline/,00a1de,ffffff

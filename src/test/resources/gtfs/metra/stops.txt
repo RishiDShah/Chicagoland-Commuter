@@ -1,0 +1,4 @@
+stop_id, stop_name, stop_desc, stop_lat, stop_lon, zone_id, stop_url, wheelchair_boarding
+BIGTIMBER, Big Timber, ,42.0583333,-88.3275000,4, https://metrarail.com/maps-schedules/train-lines/MD-W/stations/BIGTIMBER,1
+BARTLETT, Bartlett, ,41.9922222,-88.1838889,4, https://metrarail.com/maps-schedules/train-lines/MD-W/stations/BARTLETT,1
+CUS, Chicago Union Station, ,41.8788889,-87.6388889,1, https://metrarail.com/maps-schedules/system-map,1

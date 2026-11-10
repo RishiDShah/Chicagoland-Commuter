@@ -6,12 +6,16 @@ import com.vaadin.flow.theme.lumo.Lumo;
 import com.vaadin.flow.component.dependency.StyleSheet;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Entry point. Run this class from IntelliJ (green arrow) to start the app at http://localhost:8080.
  * The @PWA annotation makes the app installable to the home screen on iPhone and Android.
  */
 @SpringBootApplication
+@ConfigurationPropertiesScan
+@EnableScheduling
 @PWA(name = "Chicagoland Commuter", shortName = "Commuter",
         description = "Plan trips across CTA, Metra, Pace, Divvy, bike lanes and driving")
 @StyleSheet(Lumo.STYLESHEET)

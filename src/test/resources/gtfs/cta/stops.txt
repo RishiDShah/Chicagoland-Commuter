@@ -1,0 +1,7 @@
+﻿stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,location_type,parent_station,wheelchair_boarding
+40350,,"UIC-Halsted",,41.875474,-87.649707,1,,1
+30069,,"UIC-Halsted (Forest Pk-bound)",,41.875474,-87.649707,0,40350,1
+30070,,"UIC-Halsted (O'Hare-bound)",,41.875474,-87.649707,0,40350,1
+1281,1281,"Halsted & Polk","Halsted & Polk, Northbound, Northeast Corner",41.87196,-87.64693,0,,1
+1340,1340,"Halsted & Polk","Halsted & Polk, Southbound, Southwest Corner",41.87183,-87.64713,0,,1
+15993,15993,"Canal & Jackson, ""Union Station""","Canal & Jackson, Southbound",41.87814,-87.63954,0,,1

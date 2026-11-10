@@ -1,0 +1,7 @@
+trip_id, arrival_time, departure_time, stop_id, stop_sequence, pickup_type, drop_off_type, center_boarding, south_boarding, bikes_allowed, notice
+MD-W_MW2208_V1_A,  06:40:00,  06:40:00,  BIGTIMBER,  1,  0,  0,  0,  0,  1,  0
+MD-W_MW2208_V1_A,  07:28:00,  07:28:00,  BARTLETT,  2,  0,  0,  0,  0,  1,  0
+MD-W_MW2208_V1_A,  08:15:00,  08:15:00,  CUS,  3,  0,  0,  0,  0,  1,  0
+MD-W_MW2299_V1_A,  23:50:00,  23:50:00,  CUS,  1,  0,  0,  0,  0,  1,  0
+MD-W_MW2299_V1_A,  24:35:00,  24:35:00,  BARTLETT,  2,  0,  0,  0,  0,  1,  0
+MD-W_MW2299_V1_A,  25:10:30,  25:10:30,  BIGTIMBER,  3,  0,  0,  0,  0,  1,  0

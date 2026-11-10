@@ -1,0 +1,4 @@
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,shape_dist_traveled
+6810000272020,08:21:00,08:21:00,15993,1,Taylor,0,0
+6810000272020,,,1340,2,Taylor,0,9000
+6810000272020,08:34:00,08:34:00,1281,3,Taylor,0,12000
