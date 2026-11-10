@@ -17,8 +17,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @ConfigurationPropertiesScan
 @EnableScheduling
 @PWA(name = "Chicagoland Commuter", shortName = "Commuter",
-        description = "Plan trips across CTA, Metra, Pace, Divvy, bike lanes and driving")
+        description = "Plan trips across CTA, Metra, Pace, Divvy, bike lanes and driving",
+        themeColor = "#FFFFFF", backgroundColor = "#FFFFFF")
 @StyleSheet(Lumo.STYLESHEET)
+@StyleSheet("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap")
+@StyleSheet("styles.css")
 public class CommuterApplication implements AppShellConfigurator {
 
     public static void main(String[] args) {

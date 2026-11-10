@@ -7,17 +7,19 @@ import com.chicagoland.commuter.gtfs.StopSearchService.StopSuggestion;
 import com.chicagoland.commuter.routing.TripPlanner;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.datetimepicker.DateTimePicker;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.provider.CallbackDataProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import java.text.NumberFormat;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -33,49 +35,59 @@ public class PlanTripView extends VerticalLayout {
 
     private final SystemStatusService system;
     private final GtfsRefreshService schedules;
-    private final Span databaseLine = statusSpan();
-    private final Span scheduleLine = statusSpan();
+    private final StatusRow databaseRow = new StatusRow();
+    private final StatusRow scheduleRow = new StatusRow();
 
     public PlanTripView(SystemStatusService system, GtfsRefreshService schedules, StopSearchService stops,
                         TripPlanner planner) {
         this.system = system;
         this.schedules = schedules;
-        setMaxWidth("480px");
-        getStyle().set("margin", "0 auto");
+        addClassName("screen");
+        setPadding(false);
+        setSpacing(false);
+        setDefaultHorizontalComponentAlignment(FlexComponent.Alignment.STRETCH);
 
         var title = new H1("Chicagoland Commuter");
-        title.getStyle().set("font-size", "var(--lumo-font-size-xxl)");
+        title.addClassName("title");
+        var subtitle = new Paragraph("Plan your trip across Metra, CTA and Pace.");
+        subtitle.addClassName("muted");
+        subtitle.getStyle().set("margin", "0");
+        var header = new Div(title, subtitle);
+        header.addClassName("header");
 
-        var from = stopPicker("From", "e.g. Bartlett", stops);
-        var to = stopPicker("To", "e.g. UIC-Halsted", stops);
+        var from = stopPicker("From", "Search a station, e.g. Bartlett", stops);
+        var to = stopPicker("To", "Search a station, e.g. UIC-Halsted", stops);
 
         var leaveAt = new DateTimePicker("Leave at");
+        leaveAt.addClassName("field");
         leaveAt.setValue(LocalDateTime.now(CHICAGO).withSecond(0).withNano(0));
-        leaveAt.setStep(java.time.Duration.ofMinutes(5));
-        leaveAt.setWidthFull();
+        leaveAt.setStep(Duration.ofMinutes(5));
 
-        var results = new VerticalLayout();
-        results.setPadding(false);
-        results.setSpacing(true);
+        var results = new Div();
+        results.addClassName("results");
 
         var plan = new Button("Plan trip", e -> {
             results.removeAll();
             if (from.isEmpty() || to.isEmpty() || leaveAt.isEmpty()) {
-                results.add(new Paragraph("Choose a station or stop in both boxes."));
+                results.add(message("Choose a station in both boxes."));
                 return;
             }
             var result = planner.plan(from.getValue().stopId(), to.getValue().stopId(), leaveAt.getValue(), 3);
             if (result.options().isEmpty()) {
-                results.add(new Paragraph(result.message()));
+                results.add(message(result.message()));
             }
-            result.options().forEach(journey -> results.add(new JourneyCard(journey)));
+            for (int i = 0; i < result.options().size(); i++) {
+                results.add(new JourneyCard(result.options().get(i), i == 0));
+            }
         });
-        plan.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        plan.setWidthFull();
+        plan.addClassName("btn-primary");
         plan.setDisableOnClick(true);
         plan.addClickListener(e -> plan.setEnabled(true));
 
-        add(title, from, to, leaveAt, plan, results, databaseLine, scheduleLine);
+        var status = new Div(databaseRow, scheduleRow);
+        status.addClassName("status");
+
+        add(header, from, to, leaveAt, plan, results, status);
     }
 
     @Override
@@ -90,37 +102,39 @@ public class PlanTripView extends VerticalLayout {
         });
     }
 
-    /** Updates the status lines. Returns true once there is nothing left to wait for. */
+    /** Updates the status box. Returns true once there is nothing left to wait for. */
     private boolean refreshStatus() {
         try {
-            databaseLine.setText("Database connected · PostGIS " + system.postgisVersion());
+            databaseRow.set(StatusRow.State.OK, "Database connected · PostGIS " + system.postgisVersion());
         } catch (RuntimeException ex) {
-            databaseLine.setText("Database not reachable. Is Docker Desktop running?");
-            scheduleLine.setText("");
+            databaseRow.set(StatusRow.State.BAD, "Database not reachable. Is Docker Desktop running?");
+            scheduleRow.setVisible(false);
             return false;
         }
+        scheduleRow.setVisible(true);
         var status = schedules.status();
         if (status.ready()) {
             var n = NumberFormat.getIntegerInstance();
-            scheduleLine.setText("Schedules: " + status.feeds().stream()
+            scheduleRow.set(StatusRow.State.OK, "Schedules: " + status.feeds().stream()
                     .map(f -> f.name() + " " + n.format(f.stops()) + " stops")
                     .collect(Collectors.joining(" · "))
                     + " · updated " + UPDATED.format(status.feeds().getFirst().importedAt())
                     + (status.loading() ? " · checking for updates…" : ""));
         } else if (status.loading()) {
-            scheduleLine.setText("Loading CTA, Metra and Pace schedules… The first time takes a few minutes.");
+            scheduleRow.set(StatusRow.State.WAITING,
+                    "Loading CTA, Metra and Pace schedules… The first time takes a few minutes.");
         } else if (status.error() != null) {
-            scheduleLine.setText("Couldn't load schedules: " + status.error());
+            scheduleRow.set(StatusRow.State.BAD, "Couldn't load schedules: " + status.error());
         } else {
-            scheduleLine.setText("No schedules loaded yet.");
+            scheduleRow.set(StatusRow.State.WAITING, "No schedules loaded yet.");
         }
         return !status.loading();
     }
 
     private static ComboBox<StopSuggestion> stopPicker(String label, String placeholder, StopSearchService stops) {
         var box = new ComboBox<StopSuggestion>(label);
+        box.addClassName("field");
         box.setPlaceholder(placeholder);
-        box.setWidthFull();
         box.setItemLabelGenerator(StopSuggestion::label);
         // Loads matches from the database as you type, a page at a time
         box.setItems((CallbackDataProvider.FetchCallback<StopSuggestion, String>) query ->
@@ -128,9 +142,33 @@ public class PlanTripView extends VerticalLayout {
         return box;
     }
 
-    private static Span statusSpan() {
-        var span = new Span();
-        span.getStyle().set("font-size", "var(--lumo-font-size-s)").set("color", "var(--lumo-secondary-text-color)");
-        return span;
+    private static Paragraph message(String text) {
+        var p = new Paragraph(text);
+        p.addClassName("message");
+        return p;
+    }
+
+    /** A line in the status box with a colored dot: orange when fine, red when something's wrong. */
+    private static final class StatusRow extends Div {
+        enum State { OK, WAITING, BAD }
+
+        private final Span dot = new Span();
+        private final Span text = new Span();
+
+        StatusRow() {
+            addClassName("status-row");
+            dot.addClassName("dot");
+            add(dot, text);
+        }
+
+        void set(State state, String message) {
+            dot.setClassName("dot");
+            if (state == State.OK) {
+                dot.addClassName("ok");
+            } else if (state == State.BAD) {
+                dot.addClassName("bad");
+            }
+            text.setText(message);
+        }
     }
 }

@@ -23,7 +23,7 @@ public class TripPlanner {
     /** How far you're willing to walk from the chosen start, or to the chosen destination. */
     static final double MAX_ACCESS_WALK_METERS = 500;
     /** Each transfer counts as this many extra seconds when choosing the best option. */
-    static final int TRANSFER_PENALTY_SECS = 5 * 60;
+    static final int TRANSFER_PENALTY_SECS = 10 * 60;
 
     public record Plan(List<Journey> options, String message) {
     }

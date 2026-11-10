@@ -7,64 +7,75 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
-/** One trip option: a summary line, then each step (ride or walk). */
+/** One trip option: leave and arrive times, then each ride (with its line color) and walk. */
 class JourneyCard extends Div {
 
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("h:mm a", Locale.US);
 
-    JourneyCard(Journey journey) {
-        getStyle()
-                .set("border", "1px solid var(--lumo-contrast-10pct)")
-                .set("border-radius", "var(--lumo-border-radius-l)")
-                .set("padding", "var(--lumo-space-m)")
-                .set("width", "100%")
-                .set("box-sizing", "border-box");
+    JourneyCard(Journey journey, boolean best) {
+        addClassName("journey");
 
         var times = new Div(clock(journey.leaveAt()) + " → " + clock(journey.arriveAt()));
-        times.getStyle().set("font-weight", "600").set("font-size", "var(--lumo-font-size-l)");
+        times.addClassName("journey-times");
         int transfers = journey.transfers();
         var meta = new Div(duration(journey.durationSecs()) + " · "
                 + (transfers == 0 ? "no transfers" : transfers == 1 ? "1 transfer" : transfers + " transfers"));
-        meta.getStyle().set("color", "var(--lumo-secondary-text-color)").set("margin-bottom", "var(--lumo-space-s)");
-        add(times, meta);
+        meta.addClassName("muted");
+        var head = new Div(new Div(times, meta));
+        head.addClassName("journey-head");
+        if (best) {
+            var tag = new Span("Best");
+            tag.addClassNames("tag", "tag-best");
+            head.add(tag);
+        }
 
+        var legs = new Div();
+        legs.addClassName("legs");
         for (Journey.Leg leg : journey.legs()) {
-            add(switch (leg) {
+            legs.add(switch (leg) {
                 case Journey.Ride ride -> rideRow(ride);
                 case Journey.Walk walk -> walkRow(walk);
             });
         }
+        add(head, legs);
     }
 
     private static Div rideRow(Journey.Ride ride) {
-        var badge = new Span(ride.route().displayName());
-        String color = ride.route().color() == null || ride.route().color().isBlank() ? "565a5c" : ride.route().color();
-        badge.getStyle()
-                .set("background", "#" + color)
-                .set("color", textColorFor(color))
-                .set("border-radius", "var(--lumo-border-radius-s)")
-                .set("padding", "0 var(--lumo-space-xs)")
-                .set("font-weight", "600")
-                .set("font-size", "var(--lumo-font-size-s)")
-                .set("margin-right", "var(--lumo-space-xs)");
+        String color = ride.route().color() == null || ride.route().color().isBlank()
+                ? "565A5C" : ride.route().color();
+
+        var line = new Span(ride.route().displayName());
+        line.addClassName("line-tag");
+        line.getStyle().set("background", "#" + color).set("color", textColorFor(color));
         var toward = new Span("toward " + ride.toward());
-        toward.getStyle().set("color", "var(--lumo-secondary-text-color)").set("font-size", "var(--lumo-font-size-s)");
-        var detail = new Div(clock(ride.start()) + "  " + ride.fromStop() + "\n" + clock(ride.end()) + "  " + ride.toStop()
-                + "  (" + ride.stopsTraveled() + (ride.stopsTraveled() == 1 ? " stop)" : " stops)"));
-        detail.getStyle().set("white-space", "pre-line").set("font-size", "var(--lumo-font-size-s)")
-                .set("margin", "2px 0 0 var(--lumo-space-s)");
-        var row = new Div(new Div(badge, toward), detail);
-        row.getStyle().set("margin", "var(--lumo-space-s) 0");
+        toward.addClassName("toward");
+        var head = new Div(line, toward);
+        head.addClassName("ride-head");
+
+        var count = new Span(" · " + ride.stopsTraveled() + (ride.stopsTraveled() == 1 ? " stop" : " stops"));
+        count.addClassName("count");
+        var body = new Div(stopRow(ride.start(), new Span(ride.fromStop())),
+                stopRow(ride.end(), new Span(new Span(ride.toStop()), count)));
+        body.addClassName("ride-body");
+        body.getStyle().set("--line-color", "#" + color);
+
+        var row = new Div(head, body);
+        row.addClassName("ride");
+        return row;
+    }
+
+    private static Div stopRow(int time, Span stop) {
+        var t = new Span(clock(time));
+        t.addClassName("time");
+        var row = new Div(t, stop);
+        row.addClassName("stop-row");
         return row;
     }
 
     private static Div walkRow(Journey.Walk walk) {
-        String where = "Destination".equals(walk.toStop()) ? "to your destination"
-                : "Start".equals(walk.fromStop()) ? "to " + walk.toStop()
-                : "to " + walk.toStop();
+        String where = "Destination".equals(walk.toStop()) ? "to your destination" : "to " + walk.toStop();
         var row = new Div("Walk " + walk.minutes() + " min " + where);
-        row.getStyle().set("color", "var(--lumo-secondary-text-color)").set("font-size", "var(--lumo-font-size-s)")
-                .set("margin", "var(--lumo-space-xs) 0 var(--lumo-space-xs) var(--lumo-space-s)");
+        row.addClassName("walk");
         return row;
     }
 

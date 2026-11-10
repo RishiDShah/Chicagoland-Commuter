@@ -1,0 +1,126 @@
+/* Clean monochrome look, matching Second Brain: white, black ink, 1.5px outlines, one orange accent. */
+html {
+  --ink: #111111;
+  --muted: #555555;
+  --faint: #8A8A85;
+  --line: #E2E2DE;
+  --soft: #F4F4F2;
+  --accent: #F5821F;
+  --accent-soft: #FFF4EA;
+  --bg: #FFFFFF;
+  --danger: #B42318;
+
+  /* Point Vaadin's built-in theme at the same colors and font */
+  --lumo-font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --lumo-base-color: var(--bg);
+  --lumo-body-text-color: var(--ink);
+  --lumo-header-text-color: var(--ink);
+  --lumo-secondary-text-color: var(--muted);
+  --lumo-tertiary-text-color: var(--faint);
+  --lumo-primary-color: var(--ink);
+  --lumo-primary-text-color: var(--ink);
+  --lumo-primary-color-50pct: rgba(17, 17, 17, 0.5);
+  --lumo-primary-color-10pct: rgba(17, 17, 17, 0.06);
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- layout ---------- */
+.screen {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 24px);
+  gap: 20px;
+  box-sizing: border-box;
+}
+.header { display: flex; flex-direction: column; gap: 6px; }
+.title { margin: 0; font-size: 28px; line-height: 1.15; font-weight: 700; letter-spacing: -0.5px; }
+.muted { color: var(--muted); font-size: 15px; }
+.xs { font-size: 13px; }
+
+/* ---------- inputs ---------- */
+.field { width: 100%; padding: 0; }
+.field::part(label),
+vaadin-date-time-picker.field::part(label) {
+  font-size: 14px; font-weight: 700; color: var(--ink); padding-bottom: 6px;
+}
+.field::part(input-field),
+.field vaadin-date-picker::part(input-field),
+.field vaadin-time-picker::part(input-field) {
+  min-height: 48px;
+  background: var(--bg);
+  border: 1.5px solid var(--faint);
+  border-radius: 12px;
+  font-size: 16px;
+  box-shadow: none;
+}
+.field[focused]::part(input-field),
+.field vaadin-date-picker[focused]::part(input-field),
+.field vaadin-time-picker[focused]::part(input-field) {
+  border-color: var(--ink);
+}
+
+/* ---------- buttons ---------- */
+.btn-primary {
+  width: 100%;
+  min-height: 56px;
+  margin: 4px 0 0;
+  border-radius: 28px;
+  background: var(--ink);
+  color: #FFFFFF;
+  font-size: 17px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-primary[disabled] { opacity: 0.5; }
+
+/* ---------- results ---------- */
+.results { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+.message { color: var(--muted); font-size: 15px; margin: 0; }
+
+.journey {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 20px; border: 1.5px solid var(--ink); border-radius: 16px;
+}
+.journey-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.journey-times { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
+.tag {
+  font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 12px; white-space: nowrap;
+}
+.tag-best { background: var(--accent); color: var(--ink); }
+
+.legs { display: flex; flex-direction: column; gap: 10px; }
+.ride { display: flex; flex-direction: column; gap: 8px; }
+.ride-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.line-tag {
+  font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 12px; white-space: nowrap;
+}
+.toward { color: var(--muted); font-size: 14px; }
+.ride-body {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-left: 6px; padding-left: 14px;
+  border-left: 3px solid var(--line-color, var(--ink));
+}
+.stop-row { display: flex; gap: 10px; font-size: 15px; line-height: 1.35; }
+.stop-row .time { min-width: 66px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stop-row .count { color: var(--muted); }
+.walk {
+  margin-left: 6px; padding: 2px 0 2px 14px;
+  border-left: 3px dotted var(--faint);
+  color: var(--muted); font-size: 14px;
+}
+
+/* ---------- status ---------- */
+.status {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 16px; background: var(--soft); border-radius: 16px;
+  color: var(--muted); font-size: 13px; line-height: 1.4; width: 100%; box-sizing: border-box;
+}
+.status-row { display: flex; align-items: flex-start; gap: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 4px; background: var(--faint); flex-shrink: 0; margin-top: 5px; }
+.dot.ok { background: var(--accent); }
+.dot.bad { background: var(--danger); }
